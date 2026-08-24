@@ -1,4 +1,29 @@
-node_modules
+# Dependencies
+node_modules/
+
+# Secrets
 .env
-.expo
+.env.*
+*.local
+
+# Expo temp files
+.expo/
+*.jks
+*.pem
+
+# Backend builds
+dist/
+build/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS specific files
 .DS_Store
+Thumbs.db
+
+# IDE specific files
+.vscode/
+.idea/
