@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenWrapper from '../../src/components/ScreenWrapper';
@@ -41,7 +41,11 @@ export default function DashboardScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
         <View className="mb-8 mt-4 flex-row justify-between items-center">
           <View>
-            <Text className="text-gray-500 font-medium text-lg">Hello Traveler,</Text>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={{ width: 140, height: 48, marginBottom: 4 }} 
+              resizeMode="contain" 
+            />
             <Text className="text-3xl font-bold text-gray-900 leading-tight">Welcome back, Alex!</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/camera')} className="w-14 h-14 bg-white rounded-full shadow-sm border border-gray-100 items-center justify-center">
