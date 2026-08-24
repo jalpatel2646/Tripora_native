@@ -140,6 +140,21 @@ export default function TripOverviewScreen() {
         <SectionHeader title="Trip Resources" />
         <TouchableOpacity 
           activeOpacity={0.8}
+          onPress={() => router.push(`/trips/${id}/insights` as any)}
+          className="bg-white px-4 py-5 rounded-2xl shadow-sm border border-gray-100 flex-row items-center mb-3"
+        >
+           <View className="w-12 h-12 bg-pink-50 rounded-full items-center justify-center mr-4">
+              <MaterialIcons name="insights" size={24} color="#EC4899" />
+           </View>
+           <View className="flex-1">
+              <Text className="font-bold text-gray-900 text-base mb-0.5">Trip Insights</Text>
+              <Text className="text-gray-500 text-xs">Analyze stats, pace, and spending distribution.</Text>
+           </View>
+           <MaterialIcons name="chevron-right" size={24} color="#D1D5DB" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          activeOpacity={0.8}
           onPress={() => router.push(`/trips/${id}/documents` as any)}
           className="bg-white px-4 py-5 rounded-2xl shadow-sm border border-gray-100 flex-row items-center mb-6"
         >

@@ -34,7 +34,9 @@ export default function DashboardScreen() {
     } catch (e) {}
   };
 
-  const displayCities = preferences.length > 0 ? [...MOCK_CITIES].sort((a,b) => a.name.localeCompare(b.name)).reverse() : MOCK_CITIES;
+  const displayCities = preferences.length > 0 
+    ? MOCK_CITIES.filter(city => preferences.some(pref => city.tags?.includes(pref)))
+    : MOCK_CITIES;
 
   return (
     <ScreenWrapper>
