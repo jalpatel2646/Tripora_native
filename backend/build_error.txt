@@ -1,0 +1,5 @@
+﻿
+> backend@1.0.0 build
+> tsc
+
+tsconfig.json(12,25): error TS5108: Option 'moduleResolution=node10' has been removed. Please remove it from your configuration.

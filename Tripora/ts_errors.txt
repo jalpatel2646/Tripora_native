@@ -1,0 +1,6 @@
+﻿app/trips/new.tsx(21,23): error TS2353: Object literal may only specify known properties, and 'required_error' does not exist in type '{ error?: string | $ZodErrorMap<$ZodIssueInvalidType<unknown>> | undefined; message?: string | undefined; }'.
+app/trips/new.tsx(22,21): error TS2353: Object literal may only specify known properties, and 'required_error' does not exist in type '{ error?: string | $ZodErrorMap<$ZodIssueInvalidType<unknown>> | undefined; message?: string | undefined; }'.
+index.ts(3,17): error TS1261: Already included file name 'C:/Users/HP/OneDrive/Desktop/tripora reactnative/Tripora/App/index.tsx' differs from file name 'C:/Users/HP/OneDrive/Desktop/tripora reactnative/Tripora/app/index.tsx' only in casing.
+  The file is in the program because:
+    Imported via './App' from file 'C:/Users/HP/OneDrive/Desktop/tripora reactnative/Tripora/index.ts'
+    Matched by default include pattern '**/*'
