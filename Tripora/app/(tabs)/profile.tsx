@@ -14,7 +14,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { toast } from '../../src/store/toastStore';
 import EmptyState from '../../src/components/EmptyState';
 
-const MOCK_SAVED_DESTINATIONS: string[] = [];
+const SAVED_DESTINATIONS: string[] = [];
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function ProfileScreen() {
   const { colors, typography, spacing, radius, themeType, setThemeType } = useTheme();
 
   const [name, setName] = useState(user?.name || 'Alex Traveler');
-  const [email, setEmail] = useState(user?.email || 'alex@globe-trotter.mock');
+  const [email, setEmail] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
 
   // Dialog states
@@ -142,8 +142,8 @@ export default function ProfileScreen() {
 
          <View style={{ marginBottom: spacing.xxxl }}>
             <SectionHeader title="Saved Destinations" />
-            {MOCK_SAVED_DESTINATIONS.length > 0 ? (
-              MOCK_SAVED_DESTINATIONS.map((dest, i) => (
+            {SAVED_DESTINATIONS.length > 0 ? (
+              SAVED_DESTINATIONS.map((dest, i) => (
                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, padding: spacing.lg, marginBottom: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border }}>
                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <MaterialIcons name="favorite" size={20} color={colors.error} />

@@ -56,3 +56,27 @@ export const deleteActivity = async (req: Request, res: Response, next: NextFunc
     next(err);
   }
 };
+
+// @desc Search available activity stubs globally
+// @route GET /api/activities/search
+export const searchActivities = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const q = (req.query.q as string) || '';
+    const lat = req.query.lat ? parseFloat(req.query.lat as string) : null;
+    const lng = req.query.lng ? parseFloat(req.query.lng as string) : null;
+    
+    // Simple mock logic replaced to query global/nearby based on input
+    let query: any = { isGlobalStub: true };
+    if (q) {
+      query.title = { $regex: q, $options: 'i' };
+    }
+    
+    // We do not have proper GeoJSON for Activity right now, so we will return randomly or exactly match.
+    // For standard compliance without over-engineering GeoSpatial queries for non-existent data:
+    const activities = await Activity.find(query).limit(10);
+    
+    res.status(200).json({ success: true, data: activities });
+  } catch (err) {
+    next(err);
+  }
+};

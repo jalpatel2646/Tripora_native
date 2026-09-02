@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { locationService } from '../services/locationService';
-import { CityStop } from '../data/mockData';
 
 export interface RouteStop {
   id: string;

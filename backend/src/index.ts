@@ -23,6 +23,9 @@ import contactRoutes from './routes/contactRoutes';
 import shareRoutes from './routes/shareRoutes';
 import aiRoutes from './routes/aiRoutes';
 import userRoutes from './routes/userRoutes';
+import cityRoutes from './routes/cityRoutes';
+import adminRoutes from './routes/adminRoutes';
+import globalActivityRoutes from './routes/globalActivityRoutes';
 import { errorHandler } from './middleware/error.middleware';
 
 app.use('/api/auth', authRoutes);
@@ -31,6 +34,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/shared', shareRoutes); // public and protected sharing
+app.use('/api/cities', cityRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/activities', globalActivityRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

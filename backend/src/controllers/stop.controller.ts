@@ -37,7 +37,7 @@ export const getStops = async (req: Request, res: Response, next: NextFunction) 
     const trip = await Trip.findById(tripId);
     if (!trip) return next(new AppError('Trip not found', 404));
     
-    const stops = await Stop.find({ tripId }).sort({ order: 1 });
+    const stops = await Stop.find({ tripId }).sort({ order: 1 }).populate('activities');
     res.status(200).json({ success: true, data: stops });
   } catch (err) {
     next(err);

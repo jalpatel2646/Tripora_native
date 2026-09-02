@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export interface IMediaComment {
+  _id?: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  text: string;
+  createdAt: Date;
+}
+
 export interface IMedia extends Document {
   userId: mongoose.Types.ObjectId;
   tripId?: mongoose.Types.ObjectId;
@@ -11,6 +18,7 @@ export interface IMedia extends Document {
   size?: number;
   width?: number;
   height?: number;
+  comments: IMediaComment[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,7 +33,14 @@ const MediaSchema: Schema = new Schema({
   mimeType: { type: String },
   size: { type: Number },
   width: { type: Number },
-  height: { type: Number }
+  height: { type: Number },
+  comments: [
+    {
+      userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      text: { type: String, required: true },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ]
 }, { timestamps: true });
 
 MediaSchema.index({ tripId: 1, createdAt: -1 });

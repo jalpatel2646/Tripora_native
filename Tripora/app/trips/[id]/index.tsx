@@ -3,8 +3,6 @@ import { View, Text, ScrollView, TouchableOpacity, ImageBackground, StyleSheet, 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import ScreenWrapper from '../../../src/components/ScreenWrapper';
-import { MOCK_ITINERARY_STOPS } from '../../../src/data/mockData';
-import { MOCK_BUDGET } from '../../../src/services/mockData';
 import SectionHeader from '../../../src/components/SectionHeader';
 import EmptyState from '../../../src/components/EmptyState';
 import { useCameraStore } from '../../../src/store/cameraStore';
@@ -26,10 +24,26 @@ export default function TripOverviewScreen() {
   const router = useRouter();
   const { colors, spacing, radius } = useTheme();
 
-  const stops = MOCK_ITINERARY_STOPS; // Simulating data fetch for trip id
-  
+  const [stops, setStops] = useState<any[]>([]); 
+  const [stopsLoading, setStopsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchStops = async () => {
+      try {
+        const res = await apiFetch(`/api/trips/${id}/stops`);
+        if (mounted && res.data) setStops(res.data);
+      } catch (e) {
+        console.warn('Failed to load stops', e);
+      } finally {
+        if (mounted) setStopsLoading(false);
+      }
+    };
+    fetchStops();
+    return () => { mounted = false; };
+  }, [id]);
   const { activeTrips, applyOptimization } = useTripStore();
-  const trip = activeTrips[id as string] || activeTrips['t-101'];
+  const trip = activeTrips[id as string];
   const totalCost = trip?.estimatedTotalCost || 0;
   const budgetLimit = trip?.budgetLimit || 0;
 
@@ -266,7 +280,7 @@ export default function TripOverviewScreen() {
         {/* Itinerary Summary list */}
         <SectionHeader title="Itinerary Highlights" />
         
-        {stops.length === 0 ? (
+         {stops.length === 0 && !stopsLoading ? (
           <View className="mb-6">
             <EmptyState 
               title="No Itinerary Found" 
@@ -276,15 +290,15 @@ export default function TripOverviewScreen() {
           </View>
         ) : (
           stops.map(stop => (
-          <View key={stop.id} className="mb-6 bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+          <View key={stop._id || stop.id} className="mb-6 bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
              <View className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex-row justify-between items-center">
-                <Text className="font-bold text-gray-900 text-lg">{stop.city}</Text>
+                <Text className="font-bold text-gray-900 text-lg">{stop.cityName || stop.city}</Text>
                 <Text className="text-gray-500 text-sm">{stop.days} Days</Text>
              </View>
              <View className="p-4">
-                {stop.activities.length > 0 ? (
-                  stop.activities.map((act, index) => (
-                    <View key={act.id} className={`${index !== stop.activities.length - 1 ? 'border-b border-gray-100 pb-3 mb-3' : ''}`}>
+                {stop.activities && stop.activities.length > 0 ? (
+                  stop.activities.map((act: any, index: number) => (
+                    <View key={act._id || act.id} className={`${index !== stop.activities.length - 1 ? 'border-b border-gray-100 pb-3 mb-3' : ''}`}>
                        <View className="flex-row justify-between items-center">
                           <View className="flex-1 pr-4">
                             <Text className="font-bold text-gray-900 mb-1">{act.title}</Text>
@@ -433,7 +447,12 @@ export default function TripOverviewScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          onPress={() => sharingService.shareNative("Check out this awesome trip itinerary I'm planning in Tripora!", "https://tripora.app/share/TRP-MOCK-1234")}
+          onPress={async () => {
+            try {
+              const res = await apiFetch(`/api/shared/trips/${id}/share`, { method: 'POST', body: JSON.stringify({ permissions: 'VIEW' }) });
+              sharingService.shareNative("Check out this awesome trip itinerary I'm planning in Tripora!", `https://tripora.app/share/${res.data.token}`);
+            } catch (e) { toast.error('Failed to generate share link'); }
+          }}
           className="bg-primary/5 border border-primary/20 mt-4 py-4 rounded-2xl items-center justify-center flex-row"
         >
           <MaterialIcons name="ios-share" size={20} color="#7C3AED" />
@@ -441,17 +460,32 @@ export default function TripOverviewScreen() {
         </TouchableOpacity>
         
         <View className="flex-row justify-between mt-3 space-x-2">
-            <TouchableOpacity onPress={() => sharingService.shareViaWhatsApp("Check out this awesome trip itinerary I'm planning in Tripora!", "https://tripora.app/share/TRP-MOCK-1234")} className="flex-1 bg-[#25D366]/10 border border-[#25D366]/20 py-3 rounded-xl items-center justify-center flex-row mr-2">
+            <TouchableOpacity onPress={async () => {
+              try {
+                const res = await apiFetch(`/api/shared/trips/${id}/share`, { method: 'POST' });
+                sharingService.shareViaWhatsApp("Check out this awesome trip itinerary I'm planning in Tripora!", `https://tripora.app/share/${res.data.token}`);
+              } catch (e) { toast.error('Failed to generate share link'); }
+            }} className="flex-1 bg-[#25D366]/10 border border-[#25D366]/20 py-3 rounded-xl items-center justify-center flex-row mr-2">
               <MaterialIcons name="chat" size={16} color="#25D366" />
               <Text className="text-[#25D366] font-bold text-sm ml-1.5">WhatsApp</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity onPress={() => sharingService.shareViaSMS("Check out this awesome trip!", "https://tripora.app/share/TRP-MOCK-1234")} className="flex-1 bg-blue-50 border border-blue-200 py-3 rounded-xl items-center justify-center flex-row mr-2">
+            <TouchableOpacity onPress={async () => {
+              try {
+                const res = await apiFetch(`/api/shared/trips/${id}/share`, { method: 'POST' });
+                sharingService.shareViaSMS("Check out this awesome trip!", `https://tripora.app/share/${res.data.token}`);
+              } catch (e) { toast.error('Failed to generate share link'); }
+            }} className="flex-1 bg-blue-50 border border-blue-200 py-3 rounded-xl items-center justify-center flex-row mr-2">
               <MaterialIcons name="sms" size={16} color="#3B82F6" />
               <Text className="text-blue-500 font-bold text-sm ml-1.5">SMS</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity onPress={() => sharingService.shareViaEmail("Check out this trip!", "https://tripora.app/share/TRP-MOCK-1234")} className="flex-1 bg-gray-100 border border-gray-200 py-3 rounded-xl items-center justify-center flex-row">
+            <TouchableOpacity onPress={async () => {
+              try {
+                const res = await apiFetch(`/api/shared/trips/${id}/share`, { method: 'POST' });
+                sharingService.shareViaEmail("Check out this trip!", `https://tripora.app/share/${res.data.token}`);
+              } catch (e) { toast.error('Failed to generate share link'); }
+            }} className="flex-1 bg-gray-100 border border-gray-200 py-3 rounded-xl items-center justify-center flex-row">
               <MaterialIcons name="email" size={16} color="#4B5563" />
               <Text className="text-gray-600 font-bold text-sm ml-1.5">Email</Text>
             </TouchableOpacity>

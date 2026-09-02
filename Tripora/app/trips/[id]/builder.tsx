@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
@@ -11,33 +11,62 @@ import SectionHeader from '../../../src/components/SectionHeader';
 import PrimaryButton from '../../../src/components/PrimaryButton';
 import EmptyState from '../../../src/components/EmptyState';
 import ActivityCard from '../../../src/components/ActivityCard';
-import { MOCK_ITINERARY_STOPS, CityStop } from '../../../src/data/mockData';
+import { apiFetch } from '../../../src/services/api';
+import { toast } from '../../../src/store/toastStore';
 
 export default function ItineraryBuilderScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  const [stops, setStops] = useState<CityStop[]>(MOCK_ITINERARY_STOPS);
-  const [selectedStopId, setSelectedStopId] = useState<string | null>(stops.length > 0 ? stops[0].id : null);
+  const [stops, setStops] = useState<any[]>([]);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const selectedStop = stops.find(s => s.id === selectedStopId);
+  useEffect(() => {
+    let mounted = true;
+    const loadData = async () => {
+      try {
+        const res = await apiFetch(`/api/trips/${id}/stops`);
+        if (mounted && res.data) {
+          setStops(res.data);
+          if (res.data.length > 0) {
+            setSelectedStopId(res.data[0]._id || res.data[0].id);
+          }
+        }
+      } catch (err) {
+        toast.error('Failed to load itinerary stops.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    loadData();
+    return () => { mounted = false; };
+  }, [id]);
 
-  const handleDeleteStop = (stopId: string) => {
-    const updated = stops.filter(s => s.id !== stopId);
-    setStops(updated);
-    if (selectedStopId === stopId) {
-       setSelectedStopId(updated.length > 0 ? updated[0].id : null);
+  const selectedStop = stops.find(s => (s._id || s.id) === selectedStopId);
+
+  const handleDeleteStop = async (stopId: string) => {
+    try {
+      await apiFetch(`/api/trips/${id}/stops/${stopId}`, { method: 'DELETE' });
+      const updated = stops.filter(s => (s._id || s.id) !== stopId);
+      setStops(updated);
+      if (selectedStopId === stopId) {
+         setSelectedStopId(updated.length > 0 ? (updated[0]._id || updated[0].id) : null);
+      }
+      toast.success('Stop deleted.');
+    } catch (err) {
+      toast.error('Failed to delete stop.');
     }
   };
 
-  const renderStop = ({ item, drag, isActive }: RenderItemParams<CityStop>) => (
+  const renderStop = ({ item, drag, isActive }: RenderItemParams<any>) => (
     <ScaleDecorator>
       <StopCard 
         stop={item} 
         onDrag={drag}
-        onPress={() => setSelectedStopId(item.id)}
-        onDelete={() => handleDeleteStop(item.id)}
-        isActive={selectedStopId === item.id || isActive}
+        onPress={() => setSelectedStopId(item._id || item.id)}
+        onDelete={() => handleDeleteStop(item._id || item.id)}
+        isActive={selectedStopId === (item._id || item.id) || isActive}
       />
     </ScaleDecorator>
   );
@@ -51,12 +80,12 @@ export default function ItineraryBuilderScreen() {
             <MaterialIcons name="arrow-back" size={24} color="#4B5563" />
           </TouchableOpacity>
           <Text className="text-xl font-bold text-gray-900">Itinerary Builder</Text>
-          <TouchableOpacity onPress={() => router.push(`/trips/${id}`)} className="p-2 -mr-2 flex-row items-center">
+          <TouchableOpacity onPress={() => router.push(`/trips/${id}` as any)} className="p-2 -mr-2 flex-row items-center">
              <MaterialIcons name="visibility" size={22} color="#7C3AED" />
           </TouchableOpacity>
         </View>
 
-        {stops.length === 0 ? (
+        {stops.length === 0 && !loading ? (
            <EmptyState 
              title="No Stops Yet"
              description="Add cities to your trip to begin building your ultimate itinerary."
@@ -80,7 +109,7 @@ export default function ItineraryBuilderScreen() {
               <DraggableFlatList
                 data={stops}
                 onDragEnd={({ data }) => setStops(data)}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => item._id || item.id}
                 renderItem={renderStop}
                 showsVerticalScrollIndicator={false}
               />
@@ -91,7 +120,7 @@ export default function ItineraryBuilderScreen() {
                <View className="flex-1 mt-6 border-t border-gray-200 pt-6">
                  <View className="flex-row justify-between items-center mb-4">
                    <Text className="text-xl font-bold text-gray-900">
-                     {selectedStop.cityName} Activities
+                     {selectedStop.cityName || selectedStop.city} Activities
                    </Text>
                    <TouchableOpacity 
                      onPress={() => router.push('/activity-search')}
@@ -104,18 +133,18 @@ export default function ItineraryBuilderScreen() {
                  {selectedStop.activities && selectedStop.activities.length > 0 ? (
                     <DraggableFlatList // Using a simple flatlist for activities inside
                       data={selectedStop.activities}
-                      keyExtractor={(item) => item.id}
-                      renderItem={({ item }) => (
+                      keyExtractor={(item: any) => item._id || item.id}
+                      renderItem={({ item }: { item: any }) => (
                          <ActivityCard 
                            activity={item}
                            isAdded={true}
                            onToggle={() => {
-                             // Mock remove activity
+                             // Remove activity locally
                              const updatedStops = stops.map(s => {
-                               if (s.id === selectedStop.id) {
+                               if (s._id === selectedStop._id || s.id === selectedStop.id) {
                                  return {
                                    ...s,
-                                   activities: s.activities.filter(a => a.id !== item.id),
+                                   activities: s.activities.filter((a: any) => (a._id || a.id) !== (item._id || item.id)),
                                    activitiesCount: s.activitiesCount - 1
                                  };
                                }

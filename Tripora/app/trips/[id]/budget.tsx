@@ -19,7 +19,7 @@ export default function TripBudgetScreen() {
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
 
   const { activeTrips, updateTripCost } = useTripStore();
-  const trip = activeTrips[id as string] || activeTrips['t-101'];
+  const trip = activeTrips[id as string];
   
   // Camera integration for Receipts
   const { capturedUri, activeMode, clearCapturedImage } = useCameraStore();
@@ -32,23 +32,33 @@ export default function TripBudgetScreen() {
     }
   }, [activeMode, capturedUri]);
 
-  if (!trip) return null;
+  if (!trip) {
+    return (
+      <ScreenWrapper className="bg-gray-50 flex-1 justify-center items-center">
+        <Text className="text-gray-500 font-bold">Trip not found.</Text>
+      </ScreenWrapper>
+    );
+  }
 
   const chartData = [
-    { name: 'Activities', amount: trip.costBreakdown.activities, color: '#7C3AED', legendFontColor: '#374151', legendFontSize: 13 },
-    { name: 'Transport', amount: trip.costBreakdown.transport, color: '#3B82F6', legendFontColor: '#374151', legendFontSize: 13 },
-    { name: 'Stay', amount: trip.costBreakdown.accommodation, color: '#10B981', legendFontColor: '#374151', legendFontSize: 13 },
-    { name: 'Meals', amount: trip.costBreakdown.food, color: '#F59E0B', legendFontColor: '#374151', legendFontSize: 13 },
-    { name: 'Misc', amount: trip.costBreakdown.miscellaneous, color: '#EC4899', legendFontColor: '#374151', legendFontSize: 13 }
+    { name: 'Activities', amount: trip.costBreakdown?.activities || 0, color: '#7C3AED', legendFontColor: '#374151', legendFontSize: 13 },
+    { name: 'Transport', amount: trip.costBreakdown?.transport || 0, color: '#3B82F6', legendFontColor: '#374151', legendFontSize: 13 },
+    { name: 'Stay', amount: trip.costBreakdown?.accommodation || 0, color: '#10B981', legendFontColor: '#374151', legendFontSize: 13 },
+    { name: 'Meals', amount: trip.costBreakdown?.food || 0, color: '#F59E0B', legendFontColor: '#374151', legendFontSize: 13 },
+    { name: 'Misc', amount: trip.costBreakdown?.miscellaneous || 0, color: '#EC4899', legendFontColor: '#374151', legendFontSize: 13 }
   ];
 
-  const currentTotal = trip.estimatedTotalCost;
-  const budgetLimit = trip.budgetLimit;
+  const currentTotal = trip.estimatedTotalCost || 0;
+  const budgetLimit = trip.budgetLimit || 0;
   const isOverBudget = currentTotal > budgetLimit;
   const percentageUsed = budgetLimit > 0 ? (currentTotal / budgetLimit) * 100 : 0;
   
-  const travelDaysCount = 5; // Replace with moment diff later
+  const start = new Date(trip.startDate);
+  const end = new Date(trip.endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const travelDaysCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   const avgCostPerDay = travelDaysCount > 0 ? (currentTotal / travelDaysCount) : 0;
+
 
   const handleUpdateAmount = async (category: keyof typeof trip.costBreakdown, val: number) => {
     try {

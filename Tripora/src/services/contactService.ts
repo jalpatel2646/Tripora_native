@@ -7,8 +7,10 @@ export type AppContact = {
   email?: string;
   imageUri?: string;
   source: "device" | "tripora";
-  isTriporaUser?: boolean; // Mock backend matching
+  isTriporaUser?: boolean;
 };
+
+import { apiFetch } from './api';
 
 export class ContactService {
   async requestPermission(): Promise<boolean> {
@@ -25,7 +27,19 @@ export class ContactService {
       sort: Contacts.SortTypes.FirstName,
     });
 
-    return data.map(this.normalizeContact);
+    const normalized = data.map(this.normalizeContact);
+
+    // Call backend to match contacts against real DB users
+    try {
+      const response = await apiFetch('/api/contacts/match', {
+        method: 'POST',
+        body: JSON.stringify({ contacts: normalized })
+      });
+      return response.data; // this returns the contacts array with isTriporaUser updated
+    } catch (e) {
+      console.warn("Failed to match contacts on backend", e);
+      return normalized; // Fallback to unresolved contacts
+    }
   }
 
   async searchContacts(query: string): Promise<AppContact[]> {
@@ -51,13 +65,13 @@ export class ContactService {
     }
 
     return {
-      id: contact.id || Math.random().toString(),
+      id: (contact as any).id || (contact as any).lookupKey || Math.random().toString(),
       name: contact.name || 'Unknown Contact',
       phone,
       email,
       imageUri: contact.image?.uri,
       source: 'device',
-      isTriporaUser: Math.random() > 0.8, // 20% chance they are a Tripora user for matching requirements
+      isTriporaUser: false, // Initially false, updated by backend
     };
   }
 }

@@ -27,11 +27,11 @@ export default function ActivityMediaList({ tripId, activityId } : { tripId: str
     for (const asset of result.assets) {
       const mediaId = `act-${activityId}-${Date.now()}-${Math.random()}`;
       
-      const placeholder: TripMedia = {
+      const optimisticMedia: TripMedia = {
         id: mediaId, tripId, activityId, uri: asset.uri, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), uploadStatus: 'pending', uploadProgress: 0
       };
       
-      addMedia(tripId, placeholder);
+      addMedia(tripId, optimisticMedia);
       
       // Async upload logic to not block UI immediately
       (async () => {

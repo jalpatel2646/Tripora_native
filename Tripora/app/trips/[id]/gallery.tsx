@@ -29,10 +29,10 @@ export default function TripGalleryScreen() {
 
     for (const asset of result.assets) {
       const mediaId = `gallery-${Date.now()}-${Math.random()}`;
-      const placeholder: TripMedia = {
+      const optimisticMedia: TripMedia = {
         id: mediaId, tripId: id as string, uri: asset.uri, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), uploadStatus: 'pending', uploadProgress: 0
       };
-      addMedia(id as string, placeholder);
+      addMedia(id as string, optimisticMedia);
       
       // Async upload logic to not block UI immediately
       (async () => {
@@ -133,7 +133,6 @@ export default function TripGalleryScreen() {
               <View style={{ position: 'absolute', bottom: 50, left: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', padding: 16, borderRadius: 16 }}>
                  <Text style={{ color: 'white' }}>{selectedPhoto.caption || "No caption added. Edit to add one!"}</Text>
                  <TouchableOpacity style={{ marginTop: 10, alignSelf: 'flex-start' }} onPress={() => {
-                   // In a real app we'd open a text input. Mocking for now:
                    updateMediaFields(id as string, selectedPhoto.id, { caption: 'A beautiful memory!' });
                    Alert.alert('Caption Updated', 'Added successfully.');
                  }}>

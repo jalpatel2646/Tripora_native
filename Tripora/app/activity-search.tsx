@@ -1,27 +1,43 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { MOCK_ACTIVITIES, Activity } from '../src/data/mockData';
 import ActivityCard from '../src/components/ActivityCard';
 import { useLocation } from '../src/hooks/useLocation';
 import { placesService } from '../src/services/placesService';
+import { apiFetch } from '../src/services/api';
 
 export default function ActivitySearchScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('All');
-  const [nearbyActivities, setNearbyActivities] = useState<Activity[]>([]);
+  const [nearbyActivities, setNearbyActivities] = useState<any[]>([]);
+  const [globalActivities, setGlobalActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const { location, loading: locationLoading, fetchLocation } = useLocation();
   
-  // Storing simple local states to mock checking something off
+  // Storing simple local states to track checked items
   const [addedActivities, setAddedActivities] = useState<Record<string, boolean>>({});
 
   const filters = ['All', 'Sightseeing', 'Food', 'Culture', 'Adventure'];
 
-  React.useEffect(() => {
-    // Debounce search nearby
+  const fetchGlobalActivities = async (q: string) => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(`/api/activities/search?q=${encodeURIComponent(q)}`);
+      if (res.data) setGlobalActivities(res.data);
+    } catch (e) {
+      console.warn("Failed to fetch global activities", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Debounce search nearby and global
     const timeout = setTimeout(async () => {
+      fetchGlobalActivities(searchQuery);
+
       if (location && (searchQuery.length === 0 || searchQuery.length > 2)) {
         const places = await placesService.searchNearbyPlaces(location.latitude, location.longitude, searchQuery);
         setNearbyActivities(places);
@@ -36,16 +52,10 @@ export default function ActivitySearchScreen() {
     await fetchLocation();
   };
 
-  const combinedActivities = [...MOCK_ACTIVITIES, ...nearbyActivities];
+  const combinedActivities = [...globalActivities, ...nearbyActivities];
 
   const filteredActivities = combinedActivities.filter(activity => {
-    const titleMatch = (activity.title || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const descMatch = ((activity as any).description || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSearch = titleMatch || descMatch;
-    
-    if (!matchesSearch) return false;
     if (filter === 'All') return true;
-    
     return activity.type === filter;
   });
 
@@ -110,14 +120,17 @@ export default function ActivitySearchScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
-        {filteredActivities.map(activity => (
-          <ActivityCard
-            key={activity.id}
-            activity={activity}
-            isAdded={!!addedActivities[activity.id]}
-            onToggle={() => toggleActivity(activity.id)}
-          />
-        ))}
+        {filteredActivities.map(activity => {
+          const actId = activity._id || activity.id;
+          return (
+            <ActivityCard
+              key={actId}
+              activity={activity}
+              isAdded={!!addedActivities[actId]}
+              onToggle={() => toggleActivity(actId)}
+            />
+          );
+        })}
         
         {filteredActivities.length === 0 && (
           <View className="items-center justify-center mt-10 p-6">

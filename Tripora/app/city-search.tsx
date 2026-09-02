@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { MOCK_CITIES_EXTENDED } from '../src/data/mockData';
 import { useLocation } from '../src/hooks/useLocation';
+import { apiFetch } from '../src/services/api';
 
 export default function CitySearchScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('All');
+  const [cities, setCities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const { location, loading: locationLoading, fetchLocation } = useLocation();
+
+  const fetchCities = async (q: string, reg: string) => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(`/api/cities/search?q=${encodeURIComponent(q)}&region=${reg}`);
+      if (res.data) setCities(res.data);
+    } catch (e) {
+      console.warn("Failed to fetch cities", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchCities(searchQuery, filter);
+    }, 400);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, filter]);
 
   const handleUseLocation = async () => {
     const loc = await fetchLocation();
@@ -19,21 +40,6 @@ export default function CitySearchScreen() {
   };
 
   const filters = ['All', 'Europe', 'Asia', 'Americas'];
-
-  const filteredCities = MOCK_CITIES_EXTENDED.filter(city => {
-    const matchesSearch = city.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          city.country.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!matchesSearch) return false;
-    if (filter === 'All') return true;
-    
-    // Simplistic mock grouping
-    if (filter === 'Europe') return ['France', 'Italy', 'Spain', 'Turkey'].includes(city.country);
-    if (filter === 'Asia') return ['Japan', 'Indonesia', 'UAE'].includes(city.country);
-    if (filter === 'Americas') return ['USA'].includes(city.country);
-    
-    return true;
-  });
 
   return (
     <View className="flex-1 bg-white">
@@ -91,29 +97,33 @@ export default function CitySearchScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
-        {filteredCities.map(city => (
-          <View key={city.id} className="flex-row items-center bg-white border border-gray-100 rounded-2xl p-3 mb-3 shadow-sm">
-            <Image source={{ uri: city.imageUrl }} className="w-16 h-16 rounded-xl" />
-            <View className="flex-1 ml-4 justify-center">
-              <Text className="text-base font-bold text-gray-900">{city.name}</Text>
-              <Text className="text-sm text-gray-500">{city.country}</Text>
-              <View className="flex-row mt-1 space-x-3">
-                 <Text className="text-xs text-gray-400 font-medium">{city.popularity}</Text>
-                 <Text className="text-xs text-green-600 font-bold">{city.costIndex}</Text>
+        {loading ? (
+            <ActivityIndicator size="large" color="#7C3AED" className="my-10" />
+        ) : (
+          cities.map(city => (
+            <View key={city._id || city.id} className="flex-row items-center bg-white border border-gray-100 rounded-2xl p-3 mb-3 shadow-sm">
+              <Image source={{ uri: city.imageUrl || 'https://images.unsplash.com/photo-1473625247510-8b010afcebc5?auto=format&fit=crop&q=80&w=300' }} className="w-16 h-16 rounded-xl" />
+              <View className="flex-1 ml-4 justify-center">
+                <Text className="text-base font-bold text-gray-900">{city.name}</Text>
+                <Text className="text-sm text-gray-500">{city.country}</Text>
+                <View className="flex-row mt-1 space-x-3">
+                  <Text className="text-xs text-gray-400 font-medium">{city.popularity || 'Popular'}</Text>
+                  <Text className="text-xs text-green-600 font-bold">{city.costIndex || '$$'}</Text>
+                </View>
               </View>
+              <TouchableOpacity 
+                onPress={() => {
+                  // In a real flow, this would go back with chosen city id/name
+                  router.push({ pathname: '/explore', params: { cityId: city._id } });
+                }}
+                className="bg-purple-50 p-2 rounded-full"
+              >
+                <MaterialIcons name="add" size={24} color="#7C3AED" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              onPress={() => {
-                // Mock adding to trip
-                router.back();
-              }}
-              className="bg-purple-50 p-2 rounded-full"
-            >
-              <MaterialIcons name="add" size={24} color="#7C3AED" />
-            </TouchableOpacity>
-          </View>
-        ))}
-        {filteredCities.length === 0 && (
+          ))
+        )}
+        {!loading && cities.length === 0 && (
           <View className="items-center justify-center mt-10 p-6">
             <MaterialIcons name="search-off" size={48} color="#D1D5DB" />
             <Text className="text-gray-400 text-base mt-2">No active destinations found.</Text>

@@ -1,0 +1,8 @@
+﻿app/activity-search.tsx(5,26): error TS2307: Cannot find module '../src/data/mockData' or its corresponding type declarations.
+app/share/[code].tsx(6,38): error TS2307: Cannot find module '../../src/data/mockData' or its corresponding type declarations.
+app/share/[code].tsx(7,28): error TS2307: Cannot find module '../../src/services/mockData' or its corresponding type declarations.
+app/share/[code].tsx(53,24): error TS7006: Parameter 'stop' implicitly has an 'any' type.
+app/share/[code].tsx(53,30): error TS7006: Parameter 'index' implicitly has an 'any' type.
+app/share/[code].tsx(65,39): error TS7006: Parameter 'act' implicitly has an 'any' type.
+src/services/contactService.ts(68,19): error TS2339: Property 'id' does not exist on type 'Contact'.
+

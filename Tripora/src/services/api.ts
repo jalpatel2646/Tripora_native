@@ -1,9 +1,9 @@
 import { getSecureItem } from '../utils/storage';
 import { Platform } from 'react-native';
 
-export const API_BASE_URL = Platform.OS === 'web' 
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'web' 
   ? "http://localhost:5000" 
-  : "http://192.168.1.96:5000";
+  : "http://192.168.1.96:5000");
 
 export const handleApiResponse = async (response: Response) => {
   if (response.status === 401) {

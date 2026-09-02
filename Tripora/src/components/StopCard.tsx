@@ -1,10 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { CityStop } from '../data/mockData';
-
 interface StopCardProps {
-  stop: CityStop;
+  stop: any;
   onPress: () => void;
   onDelete: () => void;
   onDrag?: () => void;

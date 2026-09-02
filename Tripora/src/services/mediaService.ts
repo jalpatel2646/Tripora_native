@@ -76,7 +76,7 @@ export class MediaService {
   }
 
   /**
-   * Mock upload routine with progress chunking simulation
+   * Upload image to backend storage
    */
   async uploadImage(
     uri: string, 
@@ -107,6 +107,9 @@ export class MediaService {
 
       const response = await apiFetch(endpoint, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
         body: formData,
       });
 
@@ -118,6 +121,22 @@ export class MediaService {
       console.error('Media upload failed:', error);
       throw new Error('Failed to upload image. Please check your connection.');
     }
+  }
+
+  async addMediaComment(mediaId: string, text: string): Promise<any> {
+    const res = await apiFetch(`/api/media/${mediaId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ text })
+    });
+    return res.data;
+  }
+
+  async updateMediaCaption(mediaId: string, caption: string): Promise<any> {
+    const res = await apiFetch(`/api/media/${mediaId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ caption })
+    });
+    return res.data;
   }
 }
 

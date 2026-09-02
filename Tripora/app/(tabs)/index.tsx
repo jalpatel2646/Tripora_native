@@ -7,7 +7,6 @@ import TripCard from '../../src/components/TripCard';
 import CityCard from '../../src/components/CityCard';
 import SectionHeader from '../../src/components/SectionHeader';
 import EmptyState from '../../src/components/EmptyState';
-import { MOCK_CITIES, MOCK_BUDGET } from '../../src/services/mockData';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -43,7 +42,7 @@ export default function DashboardScreen() {
     } catch (e) {
       console.error(e);
       // Fallback
-      setRecommendations(MOCK_CITIES.slice(0, 3));
+      setRecommendations([]);
     } finally {
       setLoading(false);
     }

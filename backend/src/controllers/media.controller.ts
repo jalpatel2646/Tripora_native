@@ -161,3 +161,53 @@ export const deleteMedia = async (req: Request, res: Response, next: NextFunctio
     next(err);
   }
 };
+
+// @desc Add comment to media
+// @route POST /api/media/:id/comments
+// @access Private
+export const addMediaComment = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { text } = req.body;
+    if (!text) return next(new AppError("Text is required", 400));
+    
+    let media = await Media.findById(req.params.id);
+    if (!media) return next(new AppError("Media not found", 404));
+
+    media.comments.push({
+      userId: req.user._id,
+      text,
+      createdAt: new Date()
+    } as any);
+    
+    await media.save();
+
+    res.status(201).json({ success: true, data: media.comments });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc Delete media comment
+// @route DELETE /api/media/:id/comments/:commentId
+// @access Private
+export const deleteMediaComment = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    let media = await Media.findById(req.params.id);
+    if (!media) return next(new AppError("Media not found", 404));
+
+    const comment = media.comments.find(c => c._id?.toString() === req.params.commentId);
+    if (!comment) return next(new AppError("Comment not found", 404));
+
+    if (comment.userId.toString() !== req.user._id.toString() && media.userId.toString() !== req.user._id.toString()) {
+      return next(new AppError("Not authorized to delete this comment", 403));
+    }
+
+    media.comments = media.comments.filter(c => c._id?.toString() !== req.params.commentId);
+    await media.save();
+
+    res.status(200).json({ success: true, data: {} });
+  } catch (err) {
+    next(err);
+  }
+};
+

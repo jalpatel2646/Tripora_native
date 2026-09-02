@@ -42,3 +42,13 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     return next(new AppError('Authentication error', 500));
   }
 };
+
+export const restrictTo = (...roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Assuming the user model has a 'role' field
+    if (!roles.includes(req.user.role || 'USER')) {
+      return next(new AppError('You do not have permission to perform this action', 403));
+    }
+    next();
+  };
+};

@@ -1,12 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Activity } from '../data/mockData';
 import { openNavigation } from '../utils/navigationUtils';
 import { locationService } from '../services/locationService';
 
 interface ActivityCardProps {
-  activity: Activity;
+  activity: any;
   isAdded: boolean;
   onToggle: () => void;
 }
@@ -17,7 +16,7 @@ export default function ActivityCard({ activity, isAdded, onToggle }: ActivityCa
   const handleNavigate = async () => {
     setNavigating(true);
     try {
-      // Mock coordinates if not available on the schema
+      // coordinates if not available on the schema can be geocoded
       let lat = (activity as any).latitude;
       let lng = (activity as any).longitude;
 
