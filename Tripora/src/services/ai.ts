@@ -70,53 +70,18 @@ Your JSON must strictly match the following TypeScript interface structure:
 Make the itinerary realistic, logically ordered, and ensure costs and descriptions make sense.
 `;
 
+import { apiFetch } from './api';
+
 export const generateTripPlan = async (userPrompt: string): Promise<TripPlanResponse> => {
-  const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '';
-  
-  // Protect against dummy keys or missing keys
-  if (!apiKey || apiKey === 'YOUR_OPENROUTER_API_KEY_HERE') {
-      throw new Error("Missing or invalid OpenRouter API Key. Please add it to your .env file and restart the server.");
-  }
-
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await apiFetch('/api/ai/plan', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://tripora.com',
-        'X-Title': 'Tripora Travel App',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
-        max_tokens: 2500,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.7,
-      })
+      body: JSON.stringify({ prompt: userPrompt })
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenRouter API Error (${response.status}): ${errorText}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
     
-    if (!content) {
-      throw new Error('No response body returned from AI provider.');
-    }
-    
-    // Clean up markdown block wrapping if OpenRouter ignores json_object format temporarily
-    const cleanedContent = content.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
-
-    return JSON.parse(cleanedContent) as TripPlanResponse;
+    return response.data;
   } catch (error: any) {
-    console.error('OpenRouter AI Generation Error:', error);
+    console.error('AI Service Error:', error);
     throw new Error('Failed to generate trip plan. ' + (error?.message || 'Please try again later.'));
   }
 };

@@ -45,7 +45,14 @@
           "savePhotosPermission": "Allow Tripora to save videos to your photos.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Tripora to use your location."
+        }
+      ],
+      "expo-secure-store"
     ]
   }
 }

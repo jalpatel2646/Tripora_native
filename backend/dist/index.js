@@ -20,12 +20,18 @@ app.use((req, res, next) => {
     next();
 });
 // Routes
+const contactRoutes_1 = __importDefault(require("./routes/contactRoutes"));
+const shareRoutes_1 = __importDefault(require("./routes/shareRoutes"));
+const error_middleware_1 = require("./middleware/error.middleware");
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/trips', tripRoutes_1.default);
+app.use('/api/contacts', contactRoutes_1.default);
+app.use('/api/shared', shareRoutes_1.default); // public and protected sharing
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ success: true, message: 'Tripora API is running' });
+    res.json({ success: true, message: 'Tripora API is running', database: 'connected', timestamp: new Date() });
 });
+app.use(error_middleware_1.errorHandler);
 // Database connection & Server start
 mongoose_1.default.connect(MONGODB_URI)
     .then(() => {

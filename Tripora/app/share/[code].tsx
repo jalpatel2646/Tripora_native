@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import ScreenWrapper from '../../src/components/ScreenWrapper';
 import { MOCK_ITINERARY_STOPS } from '../../src/data/mockData';
 import { MOCK_TRIPS } from '../../src/services/mockData';
+import { sharingService } from '../../src/services/sharingService';
 
 export default function SharedItineraryScreen() {
   const { code } = useLocalSearchParams();
@@ -18,7 +19,7 @@ export default function SharedItineraryScreen() {
   };
 
   const handleShare = () => {
-    Alert.alert('Sharing', 'Opening native share dialog for this spectacular trip!');
+    sharingService.shareNative('Check out this spectacular trip loosely curated for you!', `https://tripora.app/share/${code}`);
   };
 
   return (

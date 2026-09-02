@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import ScreenWrapper from '../../../src/components/ScreenWrapper';
 import PrimaryButton from '../../../src/components/PrimaryButton';
+import EmptyState from '../../../src/components/EmptyState';
 import { useCameraStore } from '../../../src/store/cameraStore';
 
 interface DocumentModel {
@@ -77,12 +78,12 @@ export default function TripDocumentsScreen() {
         </TouchableOpacity>
 
         {documents.length === 0 ? (
-          <View className="items-center justify-center py-10">
-            <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4">
-              <MaterialIcons name="folder-open" size={40} color="#9CA3AF" />
-            </View>
-            <Text className="text-lg font-bold text-gray-900 mb-2">No Documents</Text>
-            <Text className="text-gray-500 text-center px-6">Store your flight tickets, hotel bookings, and receipts here for easy access.</Text>
+          <View className="mt-4">
+            <EmptyState 
+              title="No Documents" 
+              description="Store your flight tickets, hotel bookings, and receipts here for easy access."
+              iconName="folder-open"
+            />
           </View>
         ) : (
           <View className="flex-row flex-wrap justify-between">

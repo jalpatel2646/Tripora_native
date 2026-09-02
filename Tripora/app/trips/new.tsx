@@ -13,11 +13,15 @@ import ScreenWrapper from '../../src/components/ScreenWrapper';
 import InputField from '../../src/components/InputField';
 import PrimaryButton from '../../src/components/PrimaryButton';
 import { useCameraStore } from '../../src/store/cameraStore';
+import { useLocation } from '../../src/hooks/useLocation';
+import { useTheme } from '../../src/context/ThemeContext';
+import { toast } from '../../src/store/toastStore';
 
 const ALMOST_A_YEAR = new Date(new Date().setFullYear(new Date().getFullYear() + 2));
 
 const tripSchema = z.object({
   name: z.string().min(3, 'Trip name must be at least 3 characters'),
+  city: z.string().min(2, 'Starting city is required'),
   description: z.string().optional(),
   startDate: z.date({ error: 'Start date is required' }),
   endDate: z.date({ error: 'End date is required' }),
@@ -30,6 +34,7 @@ type TripFormData = z.infer<typeof tripSchema>;
 
 export default function CreateTripScreen() {
   const router = useRouter();
+  const { colors, spacing } = useTheme();
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   
@@ -46,10 +51,20 @@ export default function CreateTripScreen() {
   } = useForm<TripFormData>({
     resolver: zodResolver(tripSchema),
     defaultValues: {
+      city: '',
       startDate: new Date(),
       endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
     }
   });
+
+  const { location, loading: locationLoading, fetchLocation } = useLocation();
+
+  const handleUseCurrentLocation = async () => {
+    const loc = await fetchLocation();
+    if (loc && loc.city) {
+      setValue('city', loc.city, { shouldValidate: true });
+    }
+  };
 
   const { capturedUri, activeMode, clearCapturedImage } = useCameraStore();
   
@@ -76,15 +91,9 @@ export default function CreateTripScreen() {
     // Simulate API save
     setTimeout(() => {
       setLoading(false);
-      Alert.alert('Success', 'Trip created successfully!', [
-        { 
-          text: 'OK', 
-          onPress: () => {
-             if (router.canGoBack()) router.back();
-             else router.replace('/(tabs)/trips');
-          }
-        }
-      ]);
+      toast.success('Trip created successfully!');
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)/trips');
     }, 1200);
   };
 
@@ -92,12 +101,12 @@ export default function CreateTripScreen() {
   const endDate = watch('endDate');
 
   return (
-    <ScreenWrapper className="bg-white">
-      <View className="px-6 pt-4 pb-4 border-b border-gray-100 flex-row justify-between items-center z-10 bg-white">
-        <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
-          <MaterialIcons name="close" size={24} color="#4B5563" />
+    <ScreenWrapper style={{ backgroundColor: colors.background }}>
+      <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.background }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: spacing.sm, marginLeft: -spacing.sm }}>
+          <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">Plan New Trip</Text>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text }}>Plan New Trip</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -147,6 +156,32 @@ export default function CreateTripScreen() {
             />
           )}
         />
+
+        <View className="mb-4">
+          <Controller
+            control={control}
+            name="city"
+            render={({ field: { onChange, value } }) => (
+              <InputField
+                label="Starting City"
+                placeholder="Where does the trip start?"
+                value={value}
+                onChangeText={onChange}
+                error={errors.city?.message}
+              />
+            )}
+          />
+          <TouchableOpacity 
+            onPress={handleUseCurrentLocation} 
+            className="flex-row items-center mt-2 pl-1"
+            disabled={locationLoading}
+          >
+            <MaterialIcons name="my-location" size={16} color="#7C3AED" />
+            <Text className="text-primary text-sm font-medium ml-1">
+              {locationLoading ? 'Detecting...' : 'Use my current location'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View className="flex-row justify-between mb-4 space-x-4">
           <View className="flex-1 mr-2">

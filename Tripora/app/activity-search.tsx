@@ -2,22 +2,46 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { MOCK_ACTIVITIES } from '../src/data/mockData';
+import { MOCK_ACTIVITIES, Activity } from '../src/data/mockData';
 import ActivityCard from '../src/components/ActivityCard';
+import { useLocation } from '../src/hooks/useLocation';
+import { placesService } from '../src/services/placesService';
 
 export default function ActivitySearchScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('All');
+  const [nearbyActivities, setNearbyActivities] = useState<Activity[]>([]);
+  const { location, loading: locationLoading, fetchLocation } = useLocation();
   
   // Storing simple local states to mock checking something off
   const [addedActivities, setAddedActivities] = useState<Record<string, boolean>>({});
 
   const filters = ['All', 'Sightseeing', 'Food', 'Culture', 'Adventure'];
 
-  const filteredActivities = MOCK_ACTIVITIES.filter(activity => {
-    const matchesSearch = activity.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          activity.description.toLowerCase().includes(searchQuery.toLowerCase());
+  React.useEffect(() => {
+    // Debounce search nearby
+    const timeout = setTimeout(async () => {
+      if (location && (searchQuery.length === 0 || searchQuery.length > 2)) {
+        const places = await placesService.searchNearbyPlaces(location.latitude, location.longitude, searchQuery);
+        setNearbyActivities(places);
+      } else if (!location) {
+        setNearbyActivities([]);
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, location]);
+
+  const handleFetchNearby = async () => {
+    await fetchLocation();
+  };
+
+  const combinedActivities = [...MOCK_ACTIVITIES, ...nearbyActivities];
+
+  const filteredActivities = combinedActivities.filter(activity => {
+    const titleMatch = (activity.title || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const descMatch = ((activity as any).description || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = titleMatch || descMatch;
     
     if (!matchesSearch) return false;
     if (filter === 'All') return true;
@@ -57,6 +81,17 @@ export default function ActivitySearchScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        <TouchableOpacity 
+          onPress={handleFetchNearby}
+          disabled={locationLoading}
+          className="flex-row items-center mt-3 ml-2"
+        >
+          <MaterialIcons name="my-location" size={16} color="#7C3AED" />
+          <Text className="text-primary text-sm font-medium ml-1">
+            {locationLoading ? 'Finding you...' : 'Find nearby attractions'}
+          </Text>
+        </TouchableOpacity>
 
         {/* Filter Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4">

@@ -1,35 +1,47 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-
-let MapView: any, Marker: any, Polyline: any, Callout: any;
-if (Platform.OS !== 'web') {
-  const Maps = require('react-' + 'native-maps');
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-  Polyline = Maps.Polyline;
-  Callout = Maps.Callout;
-}
+import { useTripRoute } from '../../../src/hooks/useTripRoute';
+import { calculateTotalDistance, calculateEstimatedTravelTime } from '../../../src/utils/distanceUtils';
+import TripMap from '../../../src/components/TripMap';
 import { MaterialIcons } from '@expo/vector-icons';
-
-const MOCK_ROUTE: any[] = [];
+import { apiFetch } from '../../../src/services/api';
+import { useTripStore } from '../../../src/store/tripStore';
 
 export default function InteractiveRouteMapScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { activeTrips } = useTripStore();
+  const trip = activeTrips[id as string];
 
-  const coordinates = MOCK_ROUTE.map((stop) => ({
+  const [dbStops, setDbStops] = useState<any[]>([]);
+  const [fetchingStops, setFetchingStops] = useState(true);
+  const [selectedStop, setSelectedStop] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchStops = async () => {
+      try {
+        const res = await apiFetch(`/api/trips/${id}/stops`);
+        setDbStops(res.data || []);
+      } catch (err) {
+        console.warn('Failed to fetch stops:', err);
+      } finally {
+        setFetchingStops(false);
+      }
+    };
+    fetchStops();
+  }, [id]);
+
+  const { route, loading } = useTripRoute(dbStops, trip?.destination || '');
+
+  const coordinates = route.map((stop) => ({
     latitude: stop.latitude,
     longitude: stop.longitude,
   }));
 
-  const region = {
-    latitude: 22.0,
-    longitude: 75.0,
-    latitudeDelta: 15,
-    longitudeDelta: 15,
-  };
-
+  const totalDistance = calculateTotalDistance(coordinates);
+  const estimatedTime = calculateEstimatedTravelTime(totalDistance);
+  
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -39,60 +51,55 @@ export default function InteractiveRouteMapScreen() {
         <Text style={styles.headerTitle}>Trip Route Map</Text>
       </View>
 
-      {Platform.OS === 'web' ? (
-        <View style={[styles.map, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' }]}>
-          <MaterialIcons name="map" size={48} color="#9CA3AF" />
-          <Text style={{ color: '#6B7280', fontSize: 16, marginTop: 12 }}>Interactive map is available only on mobile devices.</Text>
+      {fetchingStops || loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#7C3AED" />
         </View>
       ) : (
-        <MapView 
-          style={styles.map} 
-          initialRegion={region}
-          mapType="standard"
-          userInterfaceStyle="light"
-        >
-          <Polyline 
-            coordinates={coordinates}
-            strokeColor="#7C3AED" 
-            strokeWidth={4}
-            lineDashPattern={[1]}
-          />
-          
-          {MOCK_ROUTE.map((stop, index) => (
-            <Marker 
-              key={stop.id}
-              coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
-              title={stop.name}
-              description={`${stop.activities} Activities Planned`}
-              pinColor="#7C3AED"
-            >
-              <Callout>
-                <View style={styles.callout}>
-                  <Text style={styles.calloutTitle}>{stop.name}</Text>
-                  <Text style={styles.calloutText}>{stop.activities} Activities</Text>
-                  <Text style={styles.calloutSub}>Stop {index + 1}</Text>
-                </View>
-              </Callout>
-            </Marker>
-          ))}
-        </MapView>
+        <TripMap 
+          route={route} 
+          loading={loading} 
+          coordinates={coordinates} 
+          onMarkerPress={(stop) => setSelectedStop(stop)} 
+        />
       )}
       
       <View style={styles.bottomCard}>
-        <Text style={styles.bottomTitle}>Route Details</Text>
-        <Text style={styles.bottomSubtitle}>{MOCK_ROUTE.length} Stops • ~2000 km</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16 }}>
-           {MOCK_ROUTE.map((s, idx) => (
-             <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center' }}>
-               <View style={styles.stopPill}>
-                 <Text style={styles.stopName}>{s.name}</Text>
-               </View>
-               {idx !== MOCK_ROUTE.length - 1 && (
-                 <MaterialIcons name="arrow-right-alt" size={20} color="#9CA3AF" style={{ marginHorizontal: 4 }} />
-               )}
+        {selectedStop ? (
+           <View>
+             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.bottomTitle}>{selectedStop.name}</Text>
+                <TouchableOpacity onPress={() => setSelectedStop(null)}>
+                   <MaterialIcons name="close" size={24} color="#9CA3AF" />
+                </TouchableOpacity>
              </View>
-           ))}
-        </ScrollView>
+             <Text style={styles.bottomSubtitle}>{selectedStop.activities || 0} Activities Planned</Text>
+             
+             <TouchableOpacity 
+               style={{ backgroundColor: '#7C3AED', padding: 16, borderRadius: 12, marginTop: 16, alignItems: 'center' }}
+               onPress={() => router.push(`/trips/${id}/builder` as any)}
+             >
+                <Text style={{ color: 'white', fontWeight: 'bold' }}>View Day Itinerary</Text>
+             </TouchableOpacity>
+           </View>
+        ) : (
+           <View>
+             <Text style={styles.bottomTitle}>Route Details</Text>
+             <Text style={styles.bottomSubtitle}>{route.length} Stops • ~{totalDistance} km • {estimatedTime}</Text>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16 }}>
+                {route.map((s, idx) => (
+                  <TouchableOpacity key={s.id} style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => setSelectedStop(s)}>
+                    <View style={styles.stopPill}>
+                      <Text style={styles.stopName}>{s.name}</Text>
+                    </View>
+                    {idx !== route.length - 1 && (
+                      <MaterialIcons name="arrow-right-alt" size={20} color="#9CA3AF" style={{ marginHorizontal: 4 }} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+             </ScrollView>
+           </View>
+        )}
       </View>
     </View>
   );
@@ -102,10 +109,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  map: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
   },
   header: {
     position: 'absolute',
@@ -133,26 +136,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#111827'
-  },
-  callout: {
-    padding: 8,
-    alignItems: 'center',
-    minWidth: 100,
-  },
-  calloutTitle: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#7C3AED',
-    marginBottom: 4
-  },
-  calloutText: {
-    fontSize: 14,
-    color: '#374151'
-  },
-  calloutSub: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    marginTop: 4
   },
   bottomCard: {
     position: 'absolute',

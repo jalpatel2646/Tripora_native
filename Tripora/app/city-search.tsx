@@ -3,11 +3,20 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, Image } from 'reac
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { MOCK_CITIES_EXTENDED } from '../src/data/mockData';
+import { useLocation } from '../src/hooks/useLocation';
 
 export default function CitySearchScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('All');
+  const { location, loading: locationLoading, fetchLocation } = useLocation();
+
+  const handleUseLocation = async () => {
+    const loc = await fetchLocation();
+    if (loc && loc.city) {
+      setSearchQuery(loc.city);
+    }
+  };
 
   const filters = ['All', 'Europe', 'Asia', 'Americas'];
 
@@ -52,6 +61,18 @@ export default function CitySearchScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Use Current Location Button */}
+        <TouchableOpacity 
+          onPress={handleUseLocation}
+          disabled={locationLoading}
+          className="flex-row items-center mt-3 ml-2"
+        >
+          <MaterialIcons name="my-location" size={16} color="#7C3AED" />
+          <Text className="text-primary text-sm font-medium ml-1">
+            {locationLoading ? 'Detecting location...' : 'Use current location'}
+          </Text>
+        </TouchableOpacity>
 
         {/* Filter Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4">

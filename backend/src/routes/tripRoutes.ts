@@ -1,38 +1,43 @@
 import { Router } from 'express';
-import { Trip } from '../models/Trip';
+import { 
+  createTrip, 
+  getTrips, 
+  getTrip, 
+  updateTrip, 
+  deleteTrip, 
+  setTripCover,
+  optimizeTrip,
+  getTripInsights
+} from '../controllers/trip.controller';
+import { protect } from '../middleware/auth.middleware';
+
+// External route routers nested
+import stopRoutes from './stopRoutes';
+import mediaRoutes from './mediaRoutes';
+import expenseRoutes from './expenseRoutes';
+import companionRoutes from './companionRoutes';
 
 const router = Router();
 
-// Create new trip
-router.post('/', async (req, res) => {
-  try {
-    const newTrip = new Trip(req.body);
-    const savedTrip = await newTrip.save();
-    res.status(201).json(savedTrip);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+router.use(protect); // ALL trip routes are protected
 
-// Get all trips
-router.get('/', async (req, res) => {
-  try {
-    const trips = await Trip.find().sort({ createdAt: -1 });
-    res.json(trips);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Nested routing
+router.use('/:tripId/stops', stopRoutes);
+router.use('/:tripId/media', mediaRoutes);
+router.use('/:tripId/expenses', expenseRoutes);
+router.use('/:tripId/companions', companionRoutes);
 
-// Get single trip
-router.get('/:id', async (req, res) => {
-  try {
-    const trip = await Trip.findById(req.params.id);
-    if (!trip) return res.status(404).json({ error: 'Trip not found' });
-    res.json(trip);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.route('/')
+  .post(createTrip)
+  .get(getTrips);
+
+router.route('/:id')
+  .get(getTrip)
+  .patch(updateTrip)
+  .delete(deleteTrip);
+
+router.patch('/:id/cover', setTripCover);
+router.patch('/:id/optimize', optimizeTrip);
+router.get('/:id/insights', getTripInsights);
 
 export default router;

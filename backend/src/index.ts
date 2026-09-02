@@ -19,13 +19,25 @@ app.use((req, res, next) => {
   next();
 });
 // Routes
+import contactRoutes from './routes/contactRoutes';
+import shareRoutes from './routes/shareRoutes';
+import aiRoutes from './routes/aiRoutes';
+import userRoutes from './routes/userRoutes';
+import { errorHandler } from './middleware/error.middleware';
+
 app.use('/api/auth', authRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/trips', tripRoutes);
+app.use('/api/contacts', contactRoutes);
+app.use('/api/shared', shareRoutes); // public and protected sharing
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'Tripora API is running' });
+  res.json({ success: true, message: 'Tripora API is running', database: 'connected', timestamp: new Date() });
 });
+
+app.use(errorHandler);
 
 // Database connection & Server start
 mongoose.connect(MONGODB_URI)

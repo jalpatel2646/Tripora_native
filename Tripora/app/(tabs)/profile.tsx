@@ -1,21 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import ScreenWrapper from '../../src/components/ScreenWrapper';
 import SectionHeader from '../../src/components/SectionHeader';
 import InputField from '../../src/components/InputField';
 import PrimaryButton from '../../src/components/PrimaryButton';
+import Button from '../../src/components/Button';
+import ConfirmDialog from '../../src/components/ConfirmDialog';
 import { useCameraStore } from '../../src/store/cameraStore';
+import { useAuth } from '../../src/context/AuthContext';
+import { useTheme } from '../../src/context/ThemeContext';
+import { toast } from '../../src/store/toastStore';
+import EmptyState from '../../src/components/EmptyState';
 
 const MOCK_SAVED_DESTINATIONS: string[] = [];
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [name, setName] = useState('Alex Traveler');
-  const [email, setEmail] = useState('alex@globe-trotter.mock');
-  const [language, setLanguage] = useState('English');
+  const { user, logout } = useAuth();
+  const { colors, typography, spacing, radius, themeType, setThemeType } = useTheme();
+
+  const [name, setName] = useState(user?.name || 'Alex Traveler');
+  const [email, setEmail] = useState(user?.email || 'alex@globe-trotter.mock');
   const [saving, setSaving] = useState(false);
+
+  // Dialog states
+  const [logoutDialog, setLogoutDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
 
   // Camera integration
   const { capturedUri, activeMode, clearCapturedImage } = useCameraStore();
@@ -32,54 +44,63 @@ export default function ProfileScreen() {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      Alert.alert('Success', 'Profile updated successfully.');
+      toast.success('Profile updated successfully.');
     }, 1000);
   };
 
-  const handleLogout = () => {
-    Alert.alert('Log Out', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: () => router.replace('/') }
-    ]);
+  const handleLogout = async () => {
+    setLogoutDialog(false);
+    await logout();
+    toast.info('Logged out successfully.');
+    router.replace('/');
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This action is irreversible. All your trips will be permanently deleted. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => router.replace('/') }
-      ]
-    );
+    setDeleteDialog(false);
+    toast.success('Account deleted successfully.');
+    router.replace('/');
+  };
+
+  const cycleTheme = () => {
+    if (themeType === 'system') setThemeType('light');
+    else if (themeType === 'light') setThemeType('dark');
+    else setThemeType('system');
   };
 
   return (
     <ScreenWrapper>
-      <View className="px-6 pt-6 pb-4 border-b border-gray-100 flex-row justify-between items-center bg-gray-50">
-        <Text className="text-2xl font-bold text-gray-900">Profile</Text>
-        <TouchableOpacity onPress={handleLogout} className="p-2 border border-gray-200 rounded-full flex-row items-center">
-          <MaterialIcons name="logout" size={20} color="#4B5563" />
+      <View style={{ 
+        paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.sm,
+        borderBottomWidth: 1, borderBottomColor: colors.border,
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        backgroundColor: colors.background
+      }}>
+        <Text style={{ fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, color: colors.text }}>
+          Profile
+        </Text>
+        <TouchableOpacity onPress={() => setLogoutDialog(true)} style={{ padding: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border }}>
+          <MaterialIcons name="logout" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 100 }}>
          
-         {/* Profile Picture Camera integration */}
-         <View className="items-center mb-8">
-            <View className="w-24 h-24 bg-purple-100 rounded-full items-center justify-center overflow-hidden mb-3">
+         <View style={{ alignItems: 'center', marginBottom: spacing.xxxl }}>
+            <View style={{ width: 96, height: 96, backgroundColor: colors.primary + '15', borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: spacing.md }}>
               {profileImage ? (
                  <Image source={{ uri: profileImage }} style={{ width: 96, height: 96 }} />
               ) : (
-                 <MaterialIcons name="person" size={48} color="#7C3AED" />
+                 <MaterialIcons name="person" size={48} color={colors.primary} />
               )}
             </View>
             <TouchableOpacity onPress={() => router.push('/camera?mode=profile')}>
-               <Text className="text-primary font-bold bg-purple-50 px-4 py-1.5 rounded-full overflow-hidden mt-1">{profileImage ? 'Update Photo' : 'Add Photo'}</Text>
+               <Text style={{ color: colors.primary, fontWeight: typography.weights.bold, backgroundColor: colors.primary + '10', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.full }}>
+                 {profileImage ? 'Update Photo' : 'Add Photo'}
+               </Text>
             </TouchableOpacity>
          </View>
 
-         <View className="mb-6">
+         <View style={{ marginBottom: spacing.xxl }}>
             <InputField 
                label="Full Name" 
                value={name} 
@@ -94,58 +115,87 @@ export default function ProfileScreen() {
             />
          </View>
 
-         <View className="mb-8 border-b border-gray-100 pb-8">
-            <SectionHeader title="Preferences" />
-            <View className="flex-row items-center justify-between bg-white px-4 py-3 rounded-2xl border border-gray-100 shadow-sm">
-               <View className="flex-row items-center">
-                  <MaterialIcons name="language" size={24} color="#6B7280" />
-                  <Text className="text-base text-gray-900 ml-3">Language</Text>
+         <View style={{ marginBottom: spacing.xxxl, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: spacing.xxxl }}>
+            <SectionHeader title="Settings" />
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md }}>
+               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialIcons name="brightness-6" size={24} color={colors.textSecondary} />
+                  <Text style={{ fontSize: typography.sizes.md, color: colors.text, marginLeft: spacing.md }}>Theme</Text>
                </View>
-               <TouchableOpacity 
-                 onPress={() => Alert.alert('Select Language', 'Pretend a dropdown opened!')}
-                 className="flex-row items-center space-x-1"
-               >
-                 <Text className="text-primary font-bold">{language}</Text>
-                 <MaterialIcons name="arrow-drop-down" size={24} color="#7C3AED" />
+               <TouchableOpacity onPress={cycleTheme} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                 <Text style={{ color: colors.primary, fontWeight: typography.weights.bold, marginRight: spacing.xs }}>
+                   {themeType === 'system' ? 'System' : themeType === 'dark' ? 'Dark' : 'Light'}
+                 </Text>
+                 <MaterialIcons name="refresh" size={20} color={colors.primary} />
                </TouchableOpacity>
             </View>
+
+            <TouchableOpacity onPress={() => router.push('/contacts-manager')} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border }}>
+               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialIcons name="contacts" size={24} color={colors.textSecondary} />
+                  <Text style={{ fontSize: typography.sizes.md, color: colors.text, marginLeft: spacing.md }}>My Contacts</Text>
+               </View>
+               <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
          </View>
 
-         <View className="mb-8">
+         <View style={{ marginBottom: spacing.xxxl }}>
             <SectionHeader title="Saved Destinations" />
             {MOCK_SAVED_DESTINATIONS.length > 0 ? (
               MOCK_SAVED_DESTINATIONS.map((dest, i) => (
-                 <View key={i} className="flex-row items-center justify-between bg-white p-4 mb-2 rounded-2xl border border-gray-100 shadow-sm">
-                   <View className="flex-row items-center">
-                      <MaterialIcons name="favorite" size={20} color="#EF4444" />
-                      <Text className="text-gray-900 font-medium ml-3">{dest}</Text>
+                 <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, padding: spacing.lg, marginBottom: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border }}>
+                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="favorite" size={20} color={colors.error} />
+                      <Text style={{ color: colors.text, fontWeight: typography.weights.medium, marginLeft: spacing.md }}>{dest}</Text>
                    </View>
                  </View>
               ))
             ) : (
-              <Text className="text-gray-500 text-center py-4 bg-white rounded-2xl border border-gray-100">No saved destinations yet.</Text>
+               <EmptyState 
+                  title="No Destinies" 
+                  description="We have no saved destinations right now."
+                  iconName="favorite-border"
+               />
             )}
          </View>
 
-         <PrimaryButton 
-           title="Save Changes" 
-           onPress={handleSave} 
-           loading={saving} 
-           className="mb-8 border border-primary" 
-         />
+         <View style={{ marginBottom: spacing.xxl }}>
+           <Button title="Save Changes" onPress={handleSave} loading={saving} />
+         </View>
 
          <TouchableOpacity 
-           onPress={handleDeleteAccount} 
-           className="bg-red-50 p-4 rounded-2xl flex-row items-center justify-center border border-red-100 mb-8"
+           onPress={() => setDeleteDialog(true)} 
+           style={{ backgroundColor: colors.error + '10', padding: spacing.lg, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.error + '30', marginBottom: spacing.xxl }}
          >
-            <MaterialIcons name="delete-forever" size={20} color="#EF4444" />
-            <Text className="text-red-600 font-bold ml-2">Delete Account</Text>
+            <MaterialIcons name="delete-forever" size={20} color={colors.error} />
+            <Text style={{ color: colors.error, fontWeight: typography.weights.bold, marginLeft: spacing.md }}>Delete Account</Text>
          </TouchableOpacity>
 
          <TouchableOpacity onPress={() => router.push('/admin')}>
-           <Text className="text-center text-gray-400 text-xs mt-2">Tripora App Version 1.0.0 (Admin)</Text>
+           <Text style={{ textAlign: 'center', color: colors.textSecondary, fontSize: typography.sizes.xs, marginTop: spacing.md }}>Tripora App Version 1.0.0 (Admin)</Text>
          </TouchableOpacity>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={logoutDialog}
+        title="Log Out"
+        message="Are you sure you want to log out?"
+        confirmTitle="Log Out"
+        isDanger
+        onConfirm={handleLogout}
+        onCancel={() => setLogoutDialog(false)}
+      />
+
+      <ConfirmDialog
+        visible={deleteDialog}
+        title="Delete Account"
+        message="This action is irreversible. All your trips will be permanently deleted. Are you sure?"
+        confirmTitle="Delete"
+        isDanger
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setDeleteDialog(false)}
+      />
     </ScreenWrapper>
   );
 }

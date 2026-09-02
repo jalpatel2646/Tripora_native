@@ -1,71 +1,17 @@
-import mongoose from 'mongoose';
-export declare const User: mongoose.Model<{
+import mongoose, { Document } from 'mongoose';
+export interface IUser extends Document {
     name: string;
     email: string;
-    password: string;
-} & mongoose.DefaultTimestampProps, {}, {}, {
-    id: string;
-}, mongoose.Document<unknown, {}, {
-    name: string;
-    email: string;
-    password: string;
-} & mongoose.DefaultTimestampProps, {
-    id: string;
-}, {
-    timestamps: true;
-}> & Omit<{
-    name: string;
-    email: string;
-    password: string;
-} & mongoose.DefaultTimestampProps & {
+    passwordHash: string;
+    profilePhoto?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export declare const User: mongoose.Model<IUser, {}, {}, {}, Document<unknown, {}, IUser, {}, mongoose.DefaultSchemaOptions> & IUser & Required<{
     _id: mongoose.Types.ObjectId;
-} & {
+}> & {
     __v: number;
-}, "id"> & mongoose.HydratedDocumentOverrides<{
+} & {
     id: string;
-}>, mongoose.Schema<any, mongoose.Model<any, any, any, any, any, any, any>, {}, {}, {}, {}, {
-    timestamps: true;
-}, {
-    name: string;
-    email: string;
-    password: string;
-} & mongoose.DefaultTimestampProps, mongoose.Document<unknown, {}, {
-    name: string;
-    email: string;
-    password: string;
-} & mongoose.DefaultTimestampProps, {
-    id: string;
-}, Omit<mongoose.DefaultSchemaOptions, "timestamps"> & {
-    timestamps: true;
-}> & Omit<{
-    name: string;
-    email: string;
-    password: string;
-} & mongoose.DefaultTimestampProps & {
-    _id: mongoose.Types.ObjectId;
-} & {
-    __v: number;
-}, "id"> & mongoose.HydratedDocumentOverrides<{
-    id: string;
-}>, unknown, {
-    createdAt: NativeDate;
-    updatedAt: NativeDate;
-    name: string;
-    email: string;
-    password: string;
-} & {
-    _id: mongoose.Types.ObjectId;
-} & {
-    __v: number;
-}>, {
-    createdAt: NativeDate;
-    updatedAt: NativeDate;
-    name: string;
-    email: string;
-    password: string;
-} & {
-    _id: mongoose.Types.ObjectId;
-} & {
-    __v: number;
-}>;
+}, any, IUser>;
 //# sourceMappingURL=User.d.ts.map

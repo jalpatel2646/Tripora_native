@@ -6,12 +6,35 @@ import ScreenWrapper from '../src/components/ScreenWrapper';
 import PrimaryButton from '../src/components/PrimaryButton';
 import SectionHeader from '../src/components/SectionHeader';
 import { generateTripPlan, TripPlanResponse } from '../src/services/ai';
+import { useTripStore } from '../src/store/tripStore';
+import { apiFetch } from '../src/services/api';
 
 export default function AIPlannerScreen() {
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TripPlanResponse | null>(null);
+
+  const updateActivity = (dayIndex: number, actIndex: number, newValue: string) => {
+    if (!result) return;
+    const newItinerary = [...result.dayWiseItinerary];
+    newItinerary[dayIndex].activities[actIndex] = newValue;
+    setResult({ ...result, dayWiseItinerary: newItinerary });
+  };
+
+  const removeActivity = (dayIndex: number, actIndex: number) => {
+    if (!result) return;
+    const newItinerary = [...result.dayWiseItinerary];
+    newItinerary[dayIndex].activities.splice(actIndex, 1);
+    setResult({ ...result, dayWiseItinerary: newItinerary });
+  };
+
+  const addActivity = (dayIndex: number) => {
+    if (!result) return;
+    const newItinerary = [...result.dayWiseItinerary];
+    newItinerary[dayIndex].activities.push("New Activity");
+    setResult({ ...result, dayWiseItinerary: newItinerary });
+  };
 
   const generateTrip = async () => {
     if (!prompt.trim()) {
@@ -33,10 +56,74 @@ export default function AIPlannerScreen() {
     }
   };
 
-  const acceptAndEdit = () => {
-    Alert.alert('Success', 'Trip created from AI plan!', [
-      { text: 'View Trip', onPress: () => router.push('/trips/1') }
-    ]);
+  const acceptAndEdit = async () => {
+    if (!result) return;
+    try {
+      setLoading(true);
+      const days = result.stops.reduce((acc, stop) => acc + stop.days, 0);
+      const endDate = new Date(Date.now() + (days > 0 ? days : 1) * 24 * 60 * 60 * 1000);
+      
+      const payload = {
+        title: result.tripTitle,
+        description: result.summary,
+        startDate: new Date().toISOString(),
+        endDate: endDate.toISOString(),
+        estimatedTotalCost: result.totalEstimatedCost,
+      };
+      
+      const tripId = await useTripStore.getState().createTrip(payload);
+      
+      let currentStartDate = new Date();
+      for (let i = 0; i < result.stops.length; i++) {
+        const stopPlan = result.stops[i];
+        const stopEndDate = new Date(currentStartDate.getTime() + (stopPlan.days * 24 * 60 * 60 * 1000));
+        
+        try {
+          const stopRes = await apiFetch(`/api/trips/${tripId}/stops`, {
+            method: 'POST',
+            body: JSON.stringify({
+              city: stopPlan.city,
+              country: stopPlan.city,
+              startDate: currentStartDate.toISOString(),
+              endDate: stopEndDate.toISOString(),
+              order: i
+            })
+          });
+          
+          const stopId = stopRes.data._id;
+          
+          const daysForStop = result.dayWiseItinerary.filter(d => 
+             d.city.toLowerCase().includes(stopPlan.city.toLowerCase()) || 
+             stopPlan.city.toLowerCase().includes(d.city.toLowerCase())
+          );
+          
+          for (const dayPlan of daysForStop) {
+            for (const activityTitle of dayPlan.activities) {
+              await apiFetch(`/api/trips/${tripId}/stops/${stopId}/activities`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  title: activityTitle,
+                  description: 'AI recommended activity',
+                  date: currentStartDate.toISOString()
+                })
+              });
+            }
+          }
+        } catch (postErr) {
+          console.warn("Failed to save stop/activity:", postErr);
+        }
+        
+        currentStartDate = stopEndDate;
+      }
+      
+      Alert.alert('Success', 'Trip created from AI plan!', [
+        { text: 'View on Dashboard', onPress: () => router.push('/(tabs)') }
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to save trip');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -126,19 +213,33 @@ export default function AIPlannerScreen() {
               ))}
             </ScrollView>
 
-            <SectionHeader title="Day-by-Day Itinerary" />
+            <SectionHeader title="Day-by-Day Itinerary (Editable Preview)" />
             <View className="mb-8 pl-2 border-l-2 border-gray-200 ml-4">
               {result.dayWiseItinerary.map((day, idx) => (
                 <View key={idx} className="mb-6 relative pl-6">
                   <View className="absolute -left-[14px] top-1 w-6 h-6 bg-purple-100 rounded-full border border-primary items-center justify-center">
                     <View className="w-2 h-2 bg-primary rounded-full" />
                   </View>
-                  <Text className="text-primary font-bold text-sm mb-1">DAY {day.day} • {day.city}</Text>
+                  <View className="flex-row justify-between items-center mb-2">
+                    <Text className="text-primary font-bold text-sm">DAY {day.day} • {day.city}</Text>
+                    <TouchableOpacity onPress={() => addActivity(idx)} className="bg-purple-50 px-2 py-1 rounded-md">
+                      <Text className="text-primary text-xs font-bold">+ Add</Text>
+                    </TouchableOpacity>
+                  </View>
                   
                   {day.activities.map((act, actIdx) => (
-                    <Text key={actIdx} className="text-gray-600 leading-6 mb-1">
-                      <Text className="font-bold text-gray-800">• </Text>{act}
-                    </Text>
+                    <View key={actIdx} className="flex-row items-center mb-2 bg-gray-50 rounded-lg p-1 border border-gray-100">
+                      <Text className="font-bold text-gray-400 mx-2">•</Text>
+                      <TextInput 
+                        className="flex-1 text-gray-700 text-sm py-1"
+                        value={act}
+                        onChangeText={(val) => updateActivity(idx, actIdx, val)}
+                        multiline
+                      />
+                      <TouchableOpacity onPress={() => removeActivity(idx, actIdx)} className="p-2">
+                         <MaterialIcons name="close" size={16} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    </View>
                   ))}
                 </View>
               ))}
